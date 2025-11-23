@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>𐌕𐋅𐌄 𐌐𐌀𐌓𐌓𐌄𐌍𐌃𐌄𐌓𐌔</title>
+<style>
+  :root{
+    --bg:#e8d5af;
+    --card-back:#936830;
+    --card-front:#84855f;
+    --matched:#6a6356;
+    --text:#2c1a00;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin: 10px;
+    font-family: "Open Sans", sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    min-height:200vh;
+    padding:60px;
+  }
+
+  header{
+    text-align:center;
+    margin-bottom:20px;
+  }
+  h1{margin: auto ;font-size: 50px}
+  p.lead{margin:auto;color:#674903}
+
+  .controls{
+    display:flex;
+    gap:50px;
+    margin-bottom:20px;
+    align-items:center;
+    flex-wrap:wrap;
+    justify-content:center;
+  }
+  .controls button, .controls select {
+    padding:16px 2s2px;
+    border-radius:20px;
+    border:5px solid rgba(136, 110, 67, 0.859);
+    background:rgb(136, 127, 97);
+    cursor:pointer;
+    font-size:20px;
+  }
+
+  .info{
+    display:flex;
+    gap: 20px;
+    align-items:center;
+    font-size:25px;
+    color:#707152;
+  }
+
+  .tablero{
+    width: min(90vw, 90vw);
+    display:grid;
+    gap:10px;
+    justify-content:center;
+    margin-top:8px;
+  }
+  /* grid será ajustado por JS según nivel */
+
+  .card{
+    width: calc(100%/4 - 12px); /* fallback; overridden by grid */
+    aspect-ratio: 1/1;
+    perspective: 900px;
+  }
+
+  .inner{
+    position:relative;
+    width:100%;
+    height:100%;
+    transform-style:preserve-3d;
+    transition: transform 400ms;
+    border-radius:10px;
+  }
+
+  .card.revealed .inner{ transform: rotateY(180deg); }
+
+  .side{
+    position:absolute;
+    inset:0;
+    border-radius:10px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:40px;
+    backface-visibility:hidden;
+    -webkit-backface-visibility:hidden;
+    box-shadow: 0 6px 14px rgba(76, 65, 9, 0.997);
+  }
+
+  .front{
+    background:var(--card-front);
+    transform: rotateY(180deg);
+    font-size:60px;
+  }
+  .back{
+    background:var(--card-back);
+    color:rgb(84, 48, 5);
+    font-size:14px;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+
+  .matched .inner{ transform: rotateY(180deg); }
+  .matched .front{ background:var(--matched); }
+
+  .status{
+    margin-top:15px;
+    font-size:8px;
+    color:#6c4f0b;
+    text-align:center;
+  }
+
+  /* responsive adjustments */
+  @media (max-width:700px){
+    .front{ font-size:26px }
+    .back{ font-size:20px }
+  }
+
+  /* simple modal */
+  .modal{
+    position:fixed;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    background:linear-gradient(rgba(210, 172, 135, 0.866), rgb(75, 55, 16));
+    z-index:60;
+  }
+  .modal.show{ display:flex; }
+  .modal .box{
+    background:rgb(131, 118, 97);
+    padding:20px 22px;
+    border-radius:10px;
+    text-align:center;
+    box-shadow:0 12px 30px rgb(94, 85, 71);
+  }
+  .modal button{
+    margin-top:20px;
+    padding:20px 20px;
+    border-radius:20px;
+    border:none;
+    background:#837145;
+    color:rgb(82, 56, 6);
+    cursor:pointer;
+  }
+
+  footer{ margin-top:20px; color:#3c3f04; font-size:13px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>𐌕𐋅𐌄 𐌐𐌀𐌓𐌓𐌄𐌍𐌃𐌄𐌓𐌔</h1>
+  <p class="lead">▁▂▄▅▆▇█ JЦΣGӨ DΣ MΣMӨЯIΛ █▇▆▅▄▂▁</p>
+
+  <div class="controls">
+    <div class="info">
+      <strong>𝚖𝚘𝚟𝚒𝚖𝚒𝚎𝚗𝚝𝚘𝚜:</strong> <span id="moves">0</span>
+    </div>
+    <div class="info">
+      <strong>𝚝𝚒𝚎𝚖𝚙𝚘:</strong> <span id="time">00:00</span>
+    </div>
+
+    <select id="level">
+      <option value="4">𝐹á𝒸𝒾𝓁 (𝟦𝓍𝟦)</option>
+      <option value="6">𝓜𝓮𝓭𝓲𝓸 (6𝔁6)</option>
+    </select>
+
+    <button id="restartBtn">𝔯𝔢𝔦𝔫𝔦𝔠𝔦𝔞𝔯</button>
+  </div>
+</header>
+
+<main>
+  <div id="tablero" class="tablero" aria-live="polite"></div>
+  <div class="status" id="status"></div>
+</main>
+
+<!-- Modal victoria -->
+<div id="modal" class="modal" role="dialog" aria-modal="true">
+  <div class="box">
+    <h2>🅶🅰🅽🅰🆂🆃🅴 🆄🅽🅰 🌟!!</h2>
+    <p id="finalText">𝐵𝑖𝑒𝑛 ℎ𝑒𝑐ℎ𝑜!!</p>
+    <button id="playAgain">𝒈𝒂𝒏𝒂𝒓 𝒖𝒏𝒂 🌟 𝒎𝒂𝒔</button>
+  </div>
+</div>
+
+<footer>recuerda enviar una captura como prueba</footer>
+
+<script>
+/* Juego de memoria - todo en una sola página
+   - Usa emojis por defecto (fácil de cambiar a rutas de imagen)
+   - Soporta 4x4 y 6x6 (elige en el select)
+*/
+
+(() => {
+  const EMOJIS = ["🍎","🍌","🍇","🍓","🍒","🥝","🍍","🍉","🍑","🍐","🥥","🥭","🍊","🍋","🍈","🍏","🍅","🥑"];
+  const tableroEl = document.getElementById('tablero');
+  const movesEl = document.getElementById('moves');
+  const timeEl = document.getElementById('time');
+  const statusEl = document.getElementById('status');
+  const restartBtn = document.getElementById('restartBtn');
+  const levelSelect = document.getElementById('level');
+  const modal = document.getElementById('modal');
+  const finalText = document.getElementById('finalText');
+  const playAgain = document.getElementById('playAgain');
+
+  let size = parseInt(levelSelect.value); // grid size (4 => 4x4)
+  let pairsNeeded = (size * size) / 2;
+  let board = []; // array of values
+  let firstCard = null;
+  let secondCard = null;
+  let locked = false;
+  let matches = 0;
+  let moves = 0;
+  let timer = null;
+  let seconds = 0;
+  let started = false;
+
+  function formatTime(s){
+    const mm = String(Math.floor(s/60)).padStart(2,'0');
+    const ss = String(s%60).padStart(2,'0');
+    return mm + ':' + ss;
+  }
+
+  function startTimer(){
+    if (timer) return;
+    timer = setInterval(() => {
+      seconds++;
+      timeEl.textContent = formatTime(seconds);
+    }, 1000);
+  }
+  function stopTimer(){
+    clearInterval(timer);
+    timer = null;
+  }
+
+  function shuffle(arr){
+    for(let i=arr.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [arr[i],arr[j]] = [arr[j],arr[i]];
+    }
+  }
+
+  function buildBoard(){
+    tableroEl.innerHTML = '';
+    // set grid columns according to size
+    const cols = Math.sqrt(size*size);
+    tableroEl.style.gridTemplateColumns = `repeat(${cols}, minmax(64px, 1fr))`;
+
+    board = [];
+    const useEmojis = EMOJIS.slice(); // copy
+    shuffle(useEmojis);
+    const selected = useEmojis.slice(0, pairsNeeded);
+    // create pairs
+    selected.forEach(v => { board.push(v); board.push(v); });
+    shuffle(board);
+
+    // create card elements
+    board.forEach((val, idx) => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.dataset.index = idx;
+      card.dataset.value = val;
+
+      const inner = document.createElement('div');
+      inner.className = 'inner';
+
+      const back = document.createElement('div');
+      back.className = 'side back';
+      back.innerHTML = '<span style="font-size:18px">Memoria</span>';
+
+      const front = document.createElement('div');
+      front.className = 'side front';
+      front.innerHTML = val; // aquí podrías usar <img src="...">
+
+      inner.appendChild(back);
+      inner.appendChild(front);
+      card.appendChild(inner);
+
+      card.addEventListener('click', () => onCardClick(card));
+      tableroEl.appendChild(card);
+    });
+
+    // reset stats
+    firstCard = secondCard = null;
+    locked = false;
+    matches = 0;
+    moves = 0;
+    seconds = 0;
+    started = false;
+    stopTimer();
+    movesEl.textContent = moves;
+    timeEl.textContent = formatTime(seconds);
+    statusEl.textContent = '';
+    modal.classList.remove('show');
+  }
+
+  function onCardClick(card){
+    if (locked) return;
+    if (card.classList.contains('revealed') || card.classList.contains('matched')) return;
+
+    // start timer at first action
+    if (!started){ started = true; startTimer(); }
+
+    // reveal
+    card.classList.add('revealed');
+
+    if (!firstCard){
+      firstCard = card;
+      return;
+    }
+
+    if (card === firstCard) return; // same card clicked twice
+
+    secondCard = card;
+    locked = true;
+    moves++;
+    movesEl.textContent = moves;
+
+    // check match
+    const v1 = firstCard.dataset.value;
+    const v2 = secondCard.dataset.value;
+
+    if (v1 === v2){
+      // correct
+      firstCard.classList.add('matched');
+      secondCard.classList.add('matched');
+      matches++;
+      locked = false;
+      firstCard = secondCard = null;
+
+      // victory?
+      if (matches === pairsNeeded){
+        stopTimer();
+        setTimeout(() => showVictory(), 400);
+      }
+    } else {
+      // hide after short delay
+      setTimeout(() => {
+        firstCard.classList.remove('revealed');
+        secondCard.classList.remove('revealed');
+        firstCard = secondCard = null;
+        locked = false;
+      }, 700);
+    }
+  }
+
+  function showVictory(){
+    finalText.textContent = `Movimientos: ${moves} · Tiempo: ${formatTime(seconds)}`;
+    modal.classList.add('show');
+  }
+
+  // controls
+  restartBtn.addEventListener('click', () => {
+    buildBoard();
+  });
+
+  levelSelect.addEventListener('change', () => {
+    size = parseInt(levelSelect.value);
+    pairsNeeded = (size*size)/2;
+    buildBoard();
+  });
+
+  playAgain.addEventListener('click', () => {
+    modal.classList.remove('show');
+    buildBoard();
+  });
+
+  // initialize with default
+  buildBoard();
+
+  // keyboard: R to restart
+  document.addEventListener('keydown', e=>{
+    if (e.key.toLowerCase() === 'r') buildBoard();
+  });
+})();
+</script>
+</body>
+</html>
